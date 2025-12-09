@@ -5,12 +5,12 @@ import traceback
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from AutoGL_GUI.phone_agent.actions import ActionHandler
-from AutoGL_GUI.phone_agent.actions.handler import do, finish, parse_action
-from AutoGL_GUI.phone_agent.adb import get_current_app, get_screenshot
-from AutoGL_GUI.phone_agent.config import SYSTEM_PROMPT
-from AutoGL_GUI.phone_agent.model import ModelClient, ModelConfig
-from AutoGL_GUI.phone_agent.model.client import MessageBuilder
+from AutoGLM_GUI.phone_agent.actions import ActionHandler
+from AutoGLM_GUI.phone_agent.actions.handler import do, finish, parse_action
+from AutoGLM_GUI.phone_agent.adb import get_current_app, get_screenshot
+from AutoGLM_GUI.phone_agent.config import SYSTEM_PROMPT
+from AutoGLM_GUI.phone_agent.model import ModelClient, ModelConfig
+from AutoGLM_GUI.phone_agent.model.client import MessageBuilder
 
 
 @dataclass

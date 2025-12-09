@@ -5,7 +5,7 @@ import subprocess
 import time
 from typing import List, Optional, Tuple
 
-from AutoGL_GUI.phone_agent.config.apps import APP_PACKAGES
+from AutoGLM_GUI.phone_agent.config.apps import APP_PACKAGES
 
 
 def get_current_app(device_id: str | None = None) -> str:

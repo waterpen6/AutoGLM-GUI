@@ -5,7 +5,7 @@ For production use, run: autoglm-gui (or uvx autoglm-gui)
 """
 
 # Re-export app from the package
-from AutoGL_GUI.server import app
+from AutoGLM_GUI.server import app
 
 if __name__ == "__main__":
     import uvicorn

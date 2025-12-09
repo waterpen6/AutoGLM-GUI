@@ -1,13 +1,13 @@
 """ADB utilities for Android device interaction."""
 
-from AutoGL_GUI.phone_agent.adb.connection import (
+from AutoGLM_GUI.phone_agent.adb.connection import (
     ADBConnection,
     ConnectionType,
     DeviceInfo,
     list_devices,
     quick_connect,
 )
-from AutoGL_GUI.phone_agent.adb.device import (
+from AutoGLM_GUI.phone_agent.adb.device import (
     back,
     double_tap,
     get_current_app,
@@ -17,13 +17,13 @@ from AutoGL_GUI.phone_agent.adb.device import (
     swipe,
     tap,
 )
-from AutoGL_GUI.phone_agent.adb.input import (
+from AutoGLM_GUI.phone_agent.adb.input import (
     clear_text,
     detect_and_set_adb_keyboard,
     restore_keyboard,
     type_text,
 )
-from AutoGL_GUI.phone_agent.adb.screenshot import get_screenshot
+from AutoGLM_GUI.phone_agent.adb.screenshot import get_screenshot
 
 __all__ = [
     # Screenshot

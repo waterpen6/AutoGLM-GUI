@@ -17,7 +17,7 @@ from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent.parent
 FRONTEND_DIR = ROOT_DIR / "frontend"
-STATIC_DIR = ROOT_DIR / "AutoGL_GUI" / "static"
+STATIC_DIR = ROOT_DIR / "AutoGLM_GUI" / "static"
 
 
 def build_frontend() -> bool:

@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from AutoGL_GUI.phone_agent.adb import (
+from AutoGLM_GUI.phone_agent.adb import (
     back,
     clear_text,
     detect_and_set_adb_keyboard,

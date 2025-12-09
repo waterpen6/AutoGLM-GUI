@@ -51,8 +51,8 @@ jobs:
 
       - name: Copy Static Files
         run: |
-          mkdir -p AutoGL_GUI/static
-          cp -r frontend/dist/* AutoGL_GUI/static/
+          mkdir -p AutoGLM_GUI/static
+          cp -r frontend/dist/* AutoGLM_GUI/static/
 
       - name: Build Package
         run: uv build
