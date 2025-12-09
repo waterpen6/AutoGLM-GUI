@@ -2,11 +2,14 @@ import { createFileRoute } from '@tanstack/react-router';
 import * as React from 'react';
 import { useState, useRef, useEffect } from 'react';
 import {
-  sendMessage,
+  sendMessageStream,
   initAgent,
   resetChat,
   getStatus,
   getScreenshot,
+  type StepEvent,
+  type DoneEvent,
+  type ErrorEvent,
   type ScreenshotResponse,
 } from '../api';
 
@@ -21,6 +24,9 @@ interface Message {
   timestamp: Date;
   steps?: number;
   success?: boolean;
+  thinking?: string[]; // 存储每步的思考过程
+  actions?: any[]; // 存储每步的动作
+  isStreaming?: boolean; // 标记是否正在流式接收
 }
 
 function ChatComponent() {
@@ -30,6 +36,7 @@ function ChatComponent() {
   const [initialized, setInitialized] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [screenshot, setScreenshot] = useState<ScreenshotResponse | null>(null);
+  const [currentStream, setCurrentStream] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const screenshotFetchingRef = useRef(false);
 
@@ -90,7 +97,7 @@ function ChatComponent() {
     }
   };
 
-  // 发送消息
+  // 发送消息（流式）
   const handleSend = async () => {
     if (!input.trim() || loading) return;
 
@@ -106,24 +113,74 @@ function ChatComponent() {
     setLoading(true);
     setError(null);
 
-    try {
-      const response = await sendMessage(userMessage.content);
+    // 创建占位 Agent 消息
+    const agentMessageId = (Date.now() + 1).toString();
+    const agentMessage: Message = {
+      id: agentMessageId,
+      role: 'agent',
+      content: '',
+      timestamp: new Date(),
+      thinking: [],
+      actions: [],
+      isStreaming: true,
+    };
+    setMessages(prev => [...prev, agentMessage]);
 
-      const agentMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'agent',
-        content: response.result,
-        timestamp: new Date(),
-        steps: response.steps,
-        success: response.success,
-      };
+    // 启动流式接收
+    const stream = sendMessageStream(
+      userMessage.content,
+      // onStep
+      (event: StepEvent) => {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === agentMessageId
+              ? {
+                  ...msg,
+                  thinking: [...(msg.thinking || []), event.thinking],
+                  actions: [...(msg.actions || []), event.action],
+                  steps: event.step,
+                }
+              : msg
+          )
+        );
+      },
+      // onDone
+      (event: DoneEvent) => {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === agentMessageId
+              ? {
+                  ...msg,
+                  content: event.message,
+                  success: event.success,
+                  isStreaming: false,
+                }
+              : msg
+          )
+        );
+        setLoading(false);
+        setCurrentStream(null);
+      },
+      // onError
+      (event: ErrorEvent) => {
+        setMessages(prev =>
+          prev.map(msg =>
+            msg.id === agentMessageId
+              ? {
+                  ...msg,
+                  content: `错误: ${event.message}`,
+                  success: false,
+                  isStreaming: false,
+                }
+              : msg
+          )
+        );
+        setLoading(false);
+        setCurrentStream(null);
+      }
+    );
 
-      setMessages(prev => [...prev, agentMessage]);
-    } catch {
-      setError('发送失败，请检查网络连接');
-    } finally {
-      setLoading(false);
-    }
+    setCurrentStream(stream);
   };
 
   // 重置对话
@@ -191,42 +248,69 @@ function ChatComponent() {
               key={message.id}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div
-                className={`max-w-[70%] rounded-2xl px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-blue-500 text-white'
-                    : message.success === false
-                      ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
-                      : 'bg-gray-200 dark:bg-gray-700'
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-                {message.role === 'agent' && message.steps !== undefined && (
-                  <p className="text-xs mt-2 opacity-70">
-                    执行步数: {message.steps}
-                  </p>
-                )}
-              </div>
+              {message.role === 'agent' ? (
+                <div className="max-w-[80%] space-y-2">
+                  {/* 显示每步思考过程 */}
+                  {message.thinking?.map((think, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-gray-100 dark:bg-gray-700 rounded-2xl px-4 py-3 border-l-4 border-blue-500"
+                    >
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                        💭 步骤 {idx + 1} - 思考过程
+                      </div>
+                      <p className="text-sm whitespace-pre-wrap">{think}</p>
+
+                      {message.actions?.[idx] && (
+                        <details className="mt-2 text-xs">
+                          <summary className="cursor-pointer text-blue-500 hover:text-blue-600">
+                            查看动作
+                          </summary>
+                          <pre className="mt-1 p-2 bg-gray-800 text-gray-200 rounded overflow-x-auto text-xs">
+                            {JSON.stringify(message.actions[idx], null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* 最终结果 */}
+                  {message.content && (
+                    <div
+                      className={`rounded-2xl px-4 py-3 ${
+                        message.success === false
+                          ? 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+                          : 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                      {message.steps !== undefined && (
+                        <p className="text-xs mt-2 opacity-70">
+                          总步数: {message.steps}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 流式加载提示 */}
+                  {message.isStreaming && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">
+                      正在执行...
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="max-w-[70%] rounded-2xl px-4 py-3 bg-blue-500 text-white">
+                  <p className="whitespace-pre-wrap">{message.content}</p>
+                </div>
+              )}
             </div>
           ))}
 
           {loading && (
             <div className="flex justify-start">
-              <div className="bg-gray-200 dark:bg-gray-700 rounded-2xl px-4 py-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" />
-                  <div
-                    className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '0.1s' }}
-                  />
-                  <div
-                    className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
-                    style={{ animationDelay: '0.2s' }}
-                  />
-                  <span className="ml-2 text-sm text-gray-500">
-                    正在执行任务...
-                  </span>
-                </div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 animate-pulse">
+                正在执行...
               </div>
             </div>
           )}

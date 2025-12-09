@@ -3,7 +3,7 @@
 import json
 import traceback
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Generator
 
 from AutoGLM_GUI.phone_agent.actions import ActionHandler
 from AutoGLM_GUI.phone_agent.actions.handler import do, finish, parse_action
@@ -103,6 +103,36 @@ class PhoneAgent:
                 return result.message or "Task completed"
 
         return "Max steps reached"
+
+    def run_stream(self, task: str) -> Generator[StepResult, None, None]:
+        """
+        Run the agent with streaming support.
+
+        Yields StepResult after each step execution.
+
+        Args:
+            task: Natural language description of the task.
+
+        Yields:
+            StepResult after each step.
+        """
+        self._context = []
+        self._step_count = 0
+
+        # First step with user prompt
+        result = self._execute_step(task, is_first=True)
+        yield result
+
+        if result.finished:
+            return
+
+        # Continue until finished or max steps reached
+        while self._step_count < self.agent_config.max_steps:
+            result = self._execute_step(is_first=False)
+            yield result
+
+            if result.finished:
+                return
 
     def step(self, task: str | None = None) -> StepResult:
         """

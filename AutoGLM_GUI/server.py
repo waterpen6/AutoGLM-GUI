@@ -1,5 +1,7 @@
 """AutoGLM-GUI Backend API Server."""
 
+import asyncio
+import json
 import os
 from importlib.metadata import version as get_version
 from importlib.resources import files
@@ -7,7 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -39,6 +41,11 @@ agent: PhoneAgent | None = None
 # 默认配置 (优先从环境变量读取，支持 reload 模式)
 DEFAULT_BASE_URL: str = os.getenv("AUTOGLM_BASE_URL", "")
 DEFAULT_MODEL_NAME: str = os.getenv("AUTOGLM_MODEL_NAME", "autoglm-phone-9b")
+
+
+def _non_blocking_takeover(message: str) -> None:
+    """Log takeover requests without blocking for console input."""
+    print(f"[Takeover] {message}")
 
 
 # 请求/响应模型
@@ -107,6 +114,7 @@ async def init_agent(request: InitRequest) -> dict:
     agent = PhoneAgent(
         model_config=model_config,
         agent_config=agent_config,
+        takeover_callback=_non_blocking_takeover,
     )
 
     return {"success": True, "message": "Agent initialized"}
@@ -130,6 +138,69 @@ def chat(request: ChatRequest) -> ChatResponse:
         return ChatResponse(result=result, steps=steps, success=True)
     except Exception as e:
         return ChatResponse(result=str(e), steps=0, success=False)
+
+
+@app.post("/api/chat/stream")
+def chat_stream(request: ChatRequest):
+    """发送任务给 Agent 并实时推送执行进度（SSE）。"""
+    global agent
+
+    if agent is None:
+        raise HTTPException(
+            status_code=400, detail="Agent not initialized. Call /api/init first."
+        )
+
+    def event_generator():
+        """SSE 事件生成器"""
+        try:
+            # 使用 run_stream() 获取每步结果
+            for step_result in agent.run_stream(request.message):
+                # 发送 step 事件
+                event_data = {
+                    "type": "step",
+                    "step": agent.step_count,
+                    "thinking": step_result.thinking,
+                    "action": step_result.action,
+                    "success": step_result.success,
+                    "finished": step_result.finished,
+                }
+
+                yield f"event: step\n"
+                yield f"data: {json.dumps(event_data, ensure_ascii=False)}\n\n"
+
+                # 如果结束，发送 done 事件
+                if step_result.finished:
+                    done_data = {
+                        "type": "done",
+                        "message": step_result.message,
+                        "steps": agent.step_count,
+                        "success": step_result.success,
+                    }
+                    yield f"event: done\n"
+                    yield f"data: {json.dumps(done_data, ensure_ascii=False)}\n\n"
+                    break
+
+            # 任务完成后重置
+            agent.reset()
+
+        except Exception as e:
+            # 发送错误事件
+            error_data = {
+                "type": "error",
+                "message": str(e),
+            }
+            yield f"event: error\n"
+            yield f"data: {json.dumps(error_data, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # 禁用 nginx 缓冲
+        },
+    )
 
 
 @app.get("/api/status", response_model=StatusResponse)
