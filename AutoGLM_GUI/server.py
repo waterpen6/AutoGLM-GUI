@@ -37,6 +37,8 @@ app.add_middleware(
 
 # 全局单例 agent
 agent: PhoneAgent | None = None
+last_model_config: ModelConfig | None = None
+last_agent_config: AgentConfig | None = None
 
 # 默认配置 (优先从环境变量读取，支持 reload 模式)
 DEFAULT_BASE_URL: str = os.getenv("AUTOGLM_BASE_URL", "")
@@ -106,7 +108,7 @@ class ScreenshotResponse(BaseModel):
 @app.post("/api/init")
 async def init_agent(request: InitRequest) -> dict:
     """初始化 PhoneAgent。"""
-    global agent
+    global agent, last_model_config, last_agent_config
 
     # 提取配置或使用空对象
     req_model_config = request.model or APIModelConfig()
@@ -145,6 +147,10 @@ async def init_agent(request: InitRequest) -> dict:
         agent_config=agent_config,
         takeover_callback=_non_blocking_takeover,
     )
+
+    # 记录最新配置，便于 reset 时自动重建
+    last_model_config = model_config
+    last_agent_config = agent_config
 
     return {"success": True, "message": "Agent initialized"}
 
@@ -260,12 +266,30 @@ async def get_status() -> StatusResponse:
 @app.post("/api/reset")
 async def reset_agent() -> dict:
     """重置 Agent 状态。"""
-    global agent
+    global agent, last_model_config, last_agent_config
 
+    reinitialized = False
+
+    # 先清空当前实例
     if agent is not None:
         agent.reset()
 
-    return {"success": True, "message": "Agent reset"}
+    # 如有历史配置，自动重建实例；否则置空
+    if last_model_config and last_agent_config:
+        agent = PhoneAgent(
+            model_config=last_model_config,
+            agent_config=last_agent_config,
+            takeover_callback=_non_blocking_takeover,
+        )
+        reinitialized = True
+    else:
+        agent = None
+
+    return {
+        "success": True,
+        "message": "Agent reset",
+        "reinitialized": reinitialized,
+    }
 
 
 @app.post("/api/screenshot", response_model=ScreenshotResponse)
