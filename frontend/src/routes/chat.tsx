@@ -46,7 +46,9 @@ function ChatComponent() {
   const [showConfig, setShowConfig] = useState(false);
   const [useVideoStream, setUseVideoStream] = useState(true); // Try video stream first
   const [videoStreamFailed, setVideoStreamFailed] = useState(false);
-  const [displayMode, setDisplayMode] = useState<'auto' | 'video' | 'screenshot'>('auto'); // User's manual choice
+  const [displayMode, setDisplayMode] = useState<
+    'auto' | 'video' | 'screenshot'
+  >('auto'); // User's manual choice
   const [tapFeedback, setTapFeedback] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -93,7 +95,8 @@ function ChatComponent() {
 
   // 截图轮询 (在 fallback 模式或用户手动选择截图模式时运行)
   useEffect(() => {
-    const shouldPollScreenshots = displayMode === 'screenshot' ||
+    const shouldPollScreenshots =
+      displayMode === 'screenshot' ||
       (displayMode === 'auto' && videoStreamFailed);
 
     if (!shouldPollScreenshots) {
@@ -273,34 +276,48 @@ function ChatComponent() {
       {showConfig && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 rounded-2xl">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-2xl w-96 shadow-xl border border-gray-200 dark:border-gray-700">
-            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Agent 配置</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">
+              Agent 配置
+            </h2>
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Base URL</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                  Base URL
+                </label>
                 <input
                   type="text"
                   value={config.baseUrl}
-                  onChange={e => setConfig({ ...config, baseUrl: e.target.value })}
+                  onChange={e =>
+                    setConfig({ ...config, baseUrl: e.target.value })
+                  }
                   placeholder="留空使用默认值"
                   className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">API Key</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                  API Key
+                </label>
                 <input
                   type="password"
                   value={config.apiKey}
-                  onChange={e => setConfig({ ...config, apiKey: e.target.value })}
+                  onChange={e =>
+                    setConfig({ ...config, apiKey: e.target.value })
+                  }
                   placeholder="留空使用默认值"
                   className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Model Name</label>
+                <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">
+                  Model Name
+                </label>
                 <input
                   type="text"
                   value={config.modelName}
-                  onChange={e => setConfig({ ...config, modelName: e.target.value })}
+                  onChange={e =>
+                    setConfig({ ...config, modelName: e.target.value })
+                  }
                   placeholder="留空使用默认值"
                   className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                 />
@@ -496,7 +513,8 @@ function ChatComponent() {
           </button>
         </div>
 
-        {displayMode === 'video' || (displayMode === 'auto' && useVideoStream && !videoStreamFailed) ? (
+        {displayMode === 'video' ||
+        (displayMode === 'auto' && useVideoStream && !videoStreamFailed) ? (
           <>
             {/* Tap feedback toast */}
             {tapFeedback && (
@@ -516,7 +534,7 @@ function ChatComponent() {
                 setTapFeedback('Tap executed');
                 setTimeout(() => setTapFeedback(null), 2000);
               }}
-              onTapError={(error) => {
+              onTapError={error => {
                 setTapFeedback(`Tap failed: ${error}`);
                 setTimeout(() => setTapFeedback(null), 3000);
               }}
@@ -532,8 +550,10 @@ function ChatComponent() {
                   alt="Device Screenshot"
                   className="max-w-full max-h-full object-contain"
                   style={{
-                    width: screenshot.width > screenshot.height ? '100%' : 'auto',
-                    height: screenshot.width > screenshot.height ? 'auto' : '100%',
+                    width:
+                      screenshot.width > screenshot.height ? '100%' : 'auto',
+                    height:
+                      screenshot.width > screenshot.height ? 'auto' : '100%',
                   }}
                 />
                 {screenshot.is_sensitive && (
@@ -544,7 +564,9 @@ function ChatComponent() {
                 {/* Mode indicator */}
                 <div className="absolute bottom-2 left-2 px-2 py-1 bg-blue-500 text-white text-xs rounded">
                   截图模式 (0.5s 刷新)
-                  {displayMode === 'auto' && videoStreamFailed && ' - 视频流不可用'}
+                  {displayMode === 'auto' &&
+                    videoStreamFailed &&
+                    ' - 视频流不可用'}
                 </div>
               </div>
             ) : screenshot?.error ? (

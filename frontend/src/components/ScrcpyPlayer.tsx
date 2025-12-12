@@ -17,12 +17,14 @@ export function ScrcpyPlayer({
   fallbackTimeout = 5000,
   enableControl = false,
   onTapSuccess,
-  onTapError
+  onTapError,
 }: ScrcpyPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const jmuxerRef = useRef<any>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const [status, setStatus] = useState<'connecting' | 'connected' | 'error' | 'disconnected'>('connecting');
+  const [status, setStatus] = useState<
+    'connecting' | 'connected' | 'error' | 'disconnected'
+  >('connecting');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
   const hasReceivedDataRef = useRef(false);
@@ -30,13 +32,16 @@ export function ScrcpyPlayer({
   // Ripple effect state
   interface RippleEffect {
     id: number;
-    x: number;  // CSS pixel coordinates
+    x: number; // CSS pixel coordinates
     y: number;
   }
   const [ripples, setRipples] = useState<RippleEffect[]>([]);
 
   // Device actual resolution (not video stream resolution)
-  const [deviceResolution, setDeviceResolution] = useState<{ width: number; height: number } | null>(null);
+  const [deviceResolution, setDeviceResolution] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
 
   // Latency monitoring
   const frameCountRef = useRef(0);
@@ -101,8 +106,12 @@ export function ScrcpyPlayer({
     const relativeX = clickX - offsetX;
     const relativeY = clickY - offsetY;
 
-    if (relativeX < 0 || relativeX > renderedWidth ||
-        relativeY < 0 || relativeY > renderedHeight) {
+    if (
+      relativeX < 0 ||
+      relativeX > renderedWidth ||
+      relativeY < 0 ||
+      relativeY > renderedHeight
+    ) {
       console.warn('[ScrcpyPlayer] Click outside video area (in letterbox)');
       return null;
     }
@@ -124,7 +133,9 @@ export function ScrcpyPlayer({
   /**
    * Handle video click event
    */
-  const handleVideoClick = async (event: React.MouseEvent<HTMLVideoElement>) => {
+  const handleVideoClick = async (
+    event: React.MouseEvent<HTMLVideoElement>
+  ) => {
     // Guard: Feature disabled
     if (!enableControl) return;
 
@@ -135,7 +146,10 @@ export function ScrcpyPlayer({
     }
 
     // Guard: Video dimensions not available
-    if (videoRef.current.videoWidth === 0 || videoRef.current.videoHeight === 0) {
+    if (
+      videoRef.current.videoWidth === 0 ||
+      videoRef.current.videoHeight === 0
+    ) {
       console.warn('[ScrcpyPlayer] Video dimensions not available');
       return;
     }
@@ -175,7 +189,10 @@ export function ScrcpyPlayer({
 
     // Add ripple effect (use viewport coordinates for fixed positioning)
     const rippleId = Date.now();
-    setRipples(prev => [...prev, { id: rippleId, x: event.clientX, y: event.clientY }]);
+    setRipples(prev => [
+      ...prev,
+      { id: rippleId, x: event.clientX, y: event.clientY },
+    ]);
 
     // Remove ripple after animation (500ms)
     setTimeout(() => {
@@ -210,11 +227,19 @@ export function ScrcpyPlayer({
       try {
         const screenshot = await getScreenshot();
         if (screenshot.success) {
-          setDeviceResolution({ width: screenshot.width, height: screenshot.height });
-          console.log(`[ScrcpyPlayer] Device actual resolution: ${screenshot.width}x${screenshot.height}`);
+          setDeviceResolution({
+            width: screenshot.width,
+            height: screenshot.height,
+          });
+          console.log(
+            `[ScrcpyPlayer] Device actual resolution: ${screenshot.width}x${screenshot.height}`
+          );
         }
       } catch (error) {
-        console.error('[ScrcpyPlayer] Failed to fetch device resolution:', error);
+        console.error(
+          '[ScrcpyPlayer] Failed to fetch device resolution:',
+          error
+        );
       }
     };
 
@@ -223,13 +248,13 @@ export function ScrcpyPlayer({
 
   useEffect(() => {
     let reconnectTimeout: NodeJS.Timeout | null = null;
-    let connectFn: (() => void) | null = null;  // Reference to connect function
+    let connectFn: (() => void) | null = null; // Reference to connect function
 
     const connect = async () => {
       if (!videoRef.current) return;
 
       console.log('[ScrcpyPlayer] connect() called');
-      lastConnectTimeRef.current = Date.now();  // Record connect time
+      lastConnectTimeRef.current = Date.now(); // Record connect time
       setStatus('connecting');
       setErrorMessage(null);
 
@@ -273,19 +298,24 @@ export function ScrcpyPlayer({
 
       try {
         // Initialize fresh jMuxer with LOW LATENCY settings
-        console.log('[ScrcpyPlayer] Creating new jMuxer instance (after cleanup delay)');
+        console.log(
+          '[ScrcpyPlayer] Creating new jMuxer instance (after cleanup delay)'
+        );
         jmuxerRef.current = new jMuxer({
           node: videoRef.current,
           mode: 'video',
-          flushingTime: 0,  // ✅ 0 = lowest latency (no buffering)
+          flushingTime: 0, // ✅ 0 = lowest latency (no buffering)
           fps: 30,
           debug: false,
-          clearBuffer: true,  // ✅ Clear buffer on errors to prevent buildup
+          clearBuffer: true, // ✅ Clear buffer on errors to prevent buildup
           onError: (error: any) => {
             console.error('[jMuxer] Decoder error:', error);
 
             // ✅ On buffer error, immediately reconnect
-            if (error.name === 'InvalidStateError' && error.error === 'buffer error') {
+            if (
+              error.name === 'InvalidStateError' &&
+              error.error === 'buffer error'
+            ) {
               const now = Date.now();
               const timeSinceLastError = now - lastErrorTimeRef.current;
               const timeSinceConnect = now - lastConnectTimeRef.current;
@@ -294,13 +324,16 @@ export function ScrcpyPlayer({
               // - If error happens soon after connect (< 1s), allow quick retry
               //   (means connection itself failed, not buffer overflow)
               // - Otherwise, require 2s between reconnects
-              const shouldReconnect = timeSinceConnect < 1000
-                ? timeSinceLastError > 500  // Quick retry for new connection failures
-                : timeSinceLastError > 2000;  // Normal debounce for buffer overflows
+              const shouldReconnect =
+                timeSinceConnect < 1000
+                  ? timeSinceLastError > 500 // Quick retry for new connection failures
+                  : timeSinceLastError > 2000; // Normal debounce for buffer overflows
 
               if (shouldReconnect) {
                 lastErrorTimeRef.current = now;
-                console.warn('[jMuxer] ⚠️ Buffer error detected, reconnecting...');
+                console.warn(
+                  '[jMuxer] ⚠️ Buffer error detected, reconnecting...'
+                );
 
                 // Immediate reconnect
                 if (connectFn) {
@@ -309,7 +342,9 @@ export function ScrcpyPlayer({
                   }, 100);
                 }
               } else {
-                console.warn(`[jMuxer] Reconnect skipped (debounced: ${timeSinceLastError}ms since last error)`);
+                console.warn(
+                  `[jMuxer] Reconnect skipped (debounced: ${timeSinceLastError}ms since last error)`
+                );
               }
             }
           },
@@ -327,7 +362,9 @@ export function ScrcpyPlayer({
           // Start fallback timer
           fallbackTimerRef.current = setTimeout(() => {
             if (!hasReceivedDataRef.current) {
-              console.log('[ScrcpyPlayer] No data received within timeout, triggering fallback');
+              console.log(
+                '[ScrcpyPlayer] No data received within timeout, triggering fallback'
+              );
               setStatus('error');
               setErrorMessage('Video stream timeout');
               ws.close();
@@ -338,7 +375,7 @@ export function ScrcpyPlayer({
           }, fallbackTimeoutRef.current);
         };
 
-        ws.onmessage = (event) => {
+        ws.onmessage = event => {
           if (typeof event.data === 'string') {
             // Error message from server
             try {
@@ -352,7 +389,10 @@ export function ScrcpyPlayer({
                 onFallbackRef.current();
               }
             } catch {
-              console.error('[ScrcpyPlayer] Received non-JSON string:', event.data);
+              console.error(
+                '[ScrcpyPlayer] Received non-JSON string:',
+                event.data
+              );
             }
             return;
           }
@@ -360,7 +400,9 @@ export function ScrcpyPlayer({
           // H.264 video data received successfully
           if (!hasReceivedDataRef.current) {
             hasReceivedDataRef.current = true;
-            console.log('[ScrcpyPlayer] First video data received, canceling fallback timer');
+            console.log(
+              '[ScrcpyPlayer] First video data received, canceling fallback timer'
+            );
             if (fallbackTimerRef.current) {
               clearTimeout(fallbackTimerRef.current);
               fallbackTimerRef.current = null;
@@ -379,18 +421,24 @@ export function ScrcpyPlayer({
               const now = Date.now();
               const elapsed = now - lastStatsTimeRef.current;
 
-              if (elapsed > 5000) {  // Log stats every 5 seconds
+              if (elapsed > 5000) {
+                // Log stats every 5 seconds
                 const fps = (frameCountRef.current / elapsed) * 1000;
                 const videoEl = videoRef.current;
-                const buffered = videoEl && videoEl.buffered.length > 0
-                  ? videoEl.buffered.end(0) - videoEl.currentTime
-                  : 0;
+                const buffered =
+                  videoEl && videoEl.buffered.length > 0
+                    ? videoEl.buffered.end(0) - videoEl.currentTime
+                    : 0;
 
-                console.log(`[ScrcpyPlayer] Stats: ${fps.toFixed(1)} fps, buffer: ${buffered.toFixed(2)}s`);
+                console.log(
+                  `[ScrcpyPlayer] Stats: ${fps.toFixed(1)} fps, buffer: ${buffered.toFixed(2)}s`
+                );
 
                 // ✅ WARNING: If buffer > 2 seconds, we're falling behind
                 if (buffered > 2) {
-                  console.warn(`[ScrcpyPlayer] ⚠ High latency detected: ${buffered.toFixed(2)}s buffer`);
+                  console.warn(
+                    `[ScrcpyPlayer] ⚠ High latency detected: ${buffered.toFixed(2)}s buffer`
+                  );
                 }
 
                 frameCountRef.current = 0;
@@ -402,7 +450,7 @@ export function ScrcpyPlayer({
           }
         };
 
-        ws.onerror = (error) => {
+        ws.onerror = error => {
           console.error('[ScrcpyPlayer] WebSocket error:', error);
           setErrorMessage('Connection error');
           setStatus('error');
@@ -458,7 +506,9 @@ export function ScrcpyPlayer({
   }, []); // Empty deps: only run once on mount
 
   return (
-    <div className={`relative w-full h-full flex items-center justify-center ${className || ''}`}>
+    <div
+      className={`relative w-full h-full flex items-center justify-center ${className || ''}`}
+    >
       {/* Video element */}
       <video
         ref={videoRef}
@@ -473,19 +523,20 @@ export function ScrcpyPlayer({
       />
 
       {/* Ripple effects overlay */}
-      {enableControl && ripples.map(ripple => (
-        <div
-          key={ripple.id}
-          className="fixed pointer-events-none z-50"
-          style={{
-            left: ripple.x,
-            top: ripple.y,
-            transform: 'translate(-50%, -50%)',
-          }}
-        >
-          <div className="ripple-circle" />
-        </div>
-      ))}
+      {enableControl &&
+        ripples.map(ripple => (
+          <div
+            key={ripple.id}
+            className="fixed pointer-events-none z-50"
+            style={{
+              left: ripple.x,
+              top: ripple.y,
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            <div className="ripple-circle" />
+          </div>
+        ))}
 
       {/* Status overlay */}
       {status !== 'connected' && (

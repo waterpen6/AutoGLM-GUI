@@ -109,7 +109,7 @@ export function sendMessageStream(
     body: JSON.stringify({ message }),
     signal: controller.signal,
   })
-    .then(async (response) => {
+    .then(async response => {
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -153,7 +153,7 @@ export function sendMessageStream(
         }
       }
     })
-    .catch((error) => {
+    .catch(error => {
       if (error.name !== 'AbortError') {
         onError({ type: 'error', message: error.message });
       }
