@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import React from 'react';
 import jMuxer from 'jmuxer';
+import JMuxer from 'jmuxer';
 import {
   sendTap,
   sendSwipe,
@@ -37,7 +38,7 @@ export function ScrcpyPlayer({
   onStreamReady,
 }: ScrcpyPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const jmuxerRef = useRef<unknown>(null);
+  const jmuxerRef = useRef<JMuxer | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const deviceIdRef = useRef<string>(deviceId); // Store current deviceId for reconnect logic
   const [status, setStatus] = useState<
