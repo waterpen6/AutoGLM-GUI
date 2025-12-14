@@ -4,10 +4,8 @@ import json
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from phone_agent import PhoneAgent
-from phone_agent.agent import AgentConfig
-from phone_agent.model import ModelConfig
 
+from AutoGLM_GUI.config import config
 from AutoGLM_GUI.schemas import (
     APIAgentConfig,
     APIModelConfig,
@@ -18,14 +16,14 @@ from AutoGLM_GUI.schemas import (
     StatusResponse,
 )
 from AutoGLM_GUI.state import (
-    DEFAULT_API_KEY,
-    DEFAULT_BASE_URL,
-    DEFAULT_MODEL_NAME,
     agent_configs,
     agents,
     non_blocking_takeover,
 )
 from AutoGLM_GUI.version import APP_VERSION
+from phone_agent import PhoneAgent
+from phone_agent.agent import AgentConfig
+from phone_agent.model import ModelConfig
 
 router = APIRouter()
 
@@ -41,11 +39,12 @@ def init_agent(request: InitRequest) -> dict:
         raise HTTPException(
             status_code=400, detail="device_id is required in agent_config"
         )
+    config.refresh_from_env()
 
-    base_url = req_model_config.base_url or DEFAULT_BASE_URL
-    api_key = req_model_config.api_key or DEFAULT_API_KEY
-    model_name = req_model_config.model_name or DEFAULT_MODEL_NAME
-
+    base_url = req_model_config.base_url or config.base_url
+    api_key = req_model_config.api_key or config.api_key
+    model_name = req_model_config.model_name or config.model_name
+    
     if not base_url:
         raise HTTPException(
             status_code=400, detail="base_url is required (in model_config or env)"

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import asyncio
-import os
 from typing import TYPE_CHECKING
 
 from phone_agent.agent import AgentConfig
@@ -21,11 +20,6 @@ agent_configs: dict[str, tuple[ModelConfig, AgentConfig]] = {}
 # Scrcpy streaming per device
 scrcpy_streamers: dict[str, "ScrcpyStreamer"] = {}
 scrcpy_locks: dict[str, asyncio.Lock] = {}
-
-# Defaults pulled from env (used when request omits config)
-DEFAULT_BASE_URL: str = os.getenv("AUTOGLM_BASE_URL", "")
-DEFAULT_MODEL_NAME: str = os.getenv("AUTOGLM_MODEL_NAME", "autoglm-phone-9b")
-DEFAULT_API_KEY: str = os.getenv("AUTOGLM_API_KEY", "EMPTY")
 
 
 def non_blocking_takeover(message: str) -> None:

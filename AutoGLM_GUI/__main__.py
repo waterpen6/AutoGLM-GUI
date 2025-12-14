@@ -130,6 +130,7 @@ def main() -> None:
     import uvicorn
 
     from AutoGLM_GUI import server
+    from AutoGLM_GUI.config import config
 
     # Set model configuration via environment variables (survives reload)
     os.environ["AUTOGLM_BASE_URL"] = args.base_url
@@ -137,11 +138,8 @@ def main() -> None:
     if args.apikey is not None:
         os.environ["AUTOGLM_API_KEY"] = args.apikey
 
-    # Also set directly for non-reload mode
-    server.DEFAULT_BASE_URL = args.base_url
-    server.DEFAULT_MODEL_NAME = args.model
-    if args.apikey is not None:
-        server.DEFAULT_API_KEY = args.apikey
+    # Refresh config from environment variables
+    config.refresh_from_env()
 
     # Display startup banner
     print()
