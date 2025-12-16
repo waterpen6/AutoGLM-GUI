@@ -2,10 +2,12 @@
 
 import asyncio
 import os
-import platform
 import socket
 import subprocess
 from pathlib import Path
+from typing import Any
+
+from AutoGLM_GUI.platform_utils import is_windows, run_cmd_silently, spawn_process
 
 
 class ScrcpyStreamer:
@@ -34,7 +36,7 @@ class ScrcpyStreamer:
         self.port = port
         self.idr_interval_s = idr_interval_s
 
-        self.scrcpy_process: subprocess.Popen | None = None
+        self.scrcpy_process: Any | None = None
         self.tcp_socket: socket.socket | None = None
         self.forward_cleanup_needed = False
 
@@ -126,50 +128,20 @@ class ScrcpyStreamer:
         if self.device_id:
             cmd_base.extend(["-s", self.device_id])
 
-        # On Windows, use subprocess.run instead of asyncio.create_subprocess_exec
-        # to avoid NotImplementedError in some Windows environments
-        if platform.system() == "Windows":
-            # Method 1: Try pkill
-            cmd = cmd_base + ["shell", "pkill", "-9", "-f", "app_process.*scrcpy"]
-            subprocess.run(cmd, capture_output=True, check=False)
+        # Method 1: Try pkill
+        cmd = cmd_base + ["shell", "pkill", "-9", "-f", "app_process.*scrcpy"]
+        await run_cmd_silently(cmd)
 
-            # Method 2: Find and kill by PID (more reliable)
-            cmd = cmd_base + [
-                "shell",
-                "ps -ef | grep 'app_process.*scrcpy' | grep -v grep | awk '{print $2}' | xargs kill -9",
-            ]
-            subprocess.run(cmd, capture_output=True, check=False)
+        # Method 2: Find and kill by PID (more reliable)
+        cmd = cmd_base + [
+            "shell",
+            "ps -ef | grep 'app_process.*scrcpy' | grep -v grep | awk '{print $2}' | xargs kill -9",
+        ]
+        await run_cmd_silently(cmd)
 
-            # Method 3: Remove port forward if exists
-            cmd_remove_forward = cmd_base + ["forward", "--remove", f"tcp:{self.port}"]
-            subprocess.run(cmd_remove_forward, capture_output=True, check=False)
-        else:
-            # Original asyncio-based implementation for Unix systems
-            # Method 1: Try pkill
-            cmd = cmd_base + ["shell", "pkill", "-9", "-f", "app_process.*scrcpy"]
-            process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            await process.wait()
-
-            # Method 2: Find and kill by PID (more reliable)
-            cmd = cmd_base + [
-                "shell",
-                "ps -ef | grep 'app_process.*scrcpy' | grep -v grep | awk '{print $2}' | xargs kill -9",
-            ]
-            process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            await process.wait()
-
-            # Method 3: Remove port forward if exists
-            cmd_remove_forward = cmd_base + ["forward", "--remove", f"tcp:{self.port}"]
-            process = await asyncio.create_subprocess_exec(
-                *cmd_remove_forward,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-            await process.wait()
+        # Method 3: Remove port forward if exists
+        cmd_remove_forward = cmd_base + ["forward", "--remove", f"tcp:{self.port}"]
+        await run_cmd_silently(cmd_remove_forward)
 
         # Wait longer for resources to be released
         print("[ScrcpyStreamer] Waiting for cleanup to complete...")
@@ -182,13 +154,7 @@ class ScrcpyStreamer:
             cmd.extend(["-s", self.device_id])
         cmd.extend(["push", self.scrcpy_server_path, "/data/local/tmp/scrcpy-server"])
 
-        if platform.system() == "Windows":
-            subprocess.run(cmd, capture_output=True, check=False)
-        else:
-            process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            await process.wait()
+        await run_cmd_silently(cmd)
 
     async def _setup_port_forward(self) -> None:
         """Setup ADB port forwarding."""
@@ -197,13 +163,7 @@ class ScrcpyStreamer:
             cmd.extend(["-s", self.device_id])
         cmd.extend(["forward", f"tcp:{self.port}", "localabstract:scrcpy"])
 
-        if platform.system() == "Windows":
-            subprocess.run(cmd, capture_output=True, check=False)
-        else:
-            process = await asyncio.create_subprocess_exec(
-                *cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-            )
-            await process.wait()
+        await run_cmd_silently(cmd)
         self.forward_cleanup_needed = True
 
     async def _start_server(self) -> None:
@@ -238,22 +198,14 @@ class ScrcpyStreamer:
             cmd.extend(server_args)
 
             # Capture stderr to see error messages
-            if platform.system() == "Windows":
-                # On Windows, use subprocess.Popen for async-like behavior
-                self.scrcpy_process = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                )
-            else:
-                self.scrcpy_process = await asyncio.create_subprocess_exec(
-                    *cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE
-                )
+            self.scrcpy_process = await spawn_process(cmd, capture_output=True)
 
             # Wait for server to start
             await asyncio.sleep(2)
 
             # Check if process is still running
             error_msg = None
-            if platform.system() == "Windows":
+            if is_windows():
                 # For Windows Popen, check returncode directly
                 if self.scrcpy_process.poll() is not None:
                     # Process has exited
