@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING
 
+from AutoGLM_GUI.logger import logger
 from phone_agent.agent import AgentConfig
 from phone_agent.model import ModelConfig
 
@@ -24,4 +25,4 @@ scrcpy_locks: dict[str, asyncio.Lock] = {}
 
 def non_blocking_takeover(message: str) -> None:
     """Log takeover requests without blocking for console input."""
-    print(f"[Takeover] {message}")
+    logger.warning(f"Takeover requested: {message}")

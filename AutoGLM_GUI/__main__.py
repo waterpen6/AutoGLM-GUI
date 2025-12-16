@@ -110,6 +110,22 @@ def main() -> None:
         action="store_true",
         help="Do not open browser automatically",
     )
+    parser.add_argument(
+        "--log-level",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        default="INFO",
+        help="Console log level (default: INFO)",
+    )
+    parser.add_argument(
+        "--log-file",
+        default="logs/autoglm_{time:YYYY-MM-DD}.log",
+        help="Log file path (default: logs/autoglm_{time:YYYY-MM-DD}.log)",
+    )
+    parser.add_argument(
+        "--no-log-file",
+        action="store_true",
+        help="Disable file logging",
+    )
 
     # If no arguments provided, print help and exit
     if len(sys.argv) == 1:
@@ -131,6 +147,13 @@ def main() -> None:
 
     from AutoGLM_GUI import server
     from AutoGLM_GUI.config import config
+    from AutoGLM_GUI.logger import configure_logger
+
+    # Configure logging system
+    configure_logger(
+        console_level=args.log_level,
+        log_file=None if args.no_log_file else args.log_file,
+    )
 
     # Set model configuration via environment variables (survives reload)
     os.environ["AUTOGLM_BASE_URL"] = args.base_url

@@ -29,6 +29,15 @@ uv run autoglm-gui --base-url http://localhost:8080/v1 --reload
 uv run autoglm-gui --base-url https://open.bigmodel.cn/api/paas/v4 \
   --model autoglm-phone \
   --apikey sk-xxxxx
+
+# Run with custom log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+uv run autoglm-gui --base-url http://localhost:8080/v1 --log-level DEBUG
+
+# Disable file logging (console only)
+uv run autoglm-gui --base-url http://localhost:8080/v1 --no-log-file
+
+# Custom log file path
+uv run autoglm-gui --base-url http://localhost:8080/v1 --log-file logs/custom.log
 ```
 
 ### Frontend Development
@@ -93,6 +102,12 @@ uv publish
   - Handles TCP socket for video data
   - Caches SPS/PPS/IDR frames for new client connections
   - Critical: Uses bundled `scrcpy-server-v3.3.3` binary (must be in project root and package)
+- **`logger.py`**: Centralized logging configuration using loguru
+  - Provides colorized console output with timestamps, levels, and source locations
+  - Automatic file logging with rotation (100MB) and retention (7 days)
+  - Separate error log files (50MB rotation, 30 days retention)
+  - Configurable via CLI parameters (--log-level, --log-file, --no-log-file)
+  - Used throughout AutoGLM_GUI/ (phone_agent/ uses original print statements)
 - **`adb_plus/`**: Extended ADB utilities (screenshot capture, etc.)
 
 ### Phone Agent (`phone_agent/`)
@@ -160,6 +175,36 @@ Core automation engine from Open-AutoGLM:
 - **Keyboard Handling**: Temporarily switches to ADB keyboard for text input, restores original after
 - **Screenshot**: Captures via ADB screencap, converts to PNG with Pillow
 
+### Logging System
+
+- **Library**: loguru - modern Python logging with zero configuration
+- **Scope**: Only AutoGLM_GUI/ directory (phone_agent/ keeps original print statements for compatibility)
+- **Console Output**:
+  - Colorized output with timestamps, log levels, and source locations
+  - Default level: INFO (adjustable via --log-level)
+  - Format: `YYYY-MM-DD HH:mm:ss.SSS | LEVEL | module:function:line - message`
+- **File Output**:
+  - Main log: `logs/autoglm_{time:YYYY-MM-DD}.log` (all levels ≥ DEBUG)
+  - Error log: `logs/errors_{time:YYYY-MM-DD}.log` (only ERROR and above)
+  - Rotation: 100MB for main log, 50MB for error log
+  - Retention: 7 days for main log, 30 days for error log
+  - Compression: zip format for rotated logs
+- **Usage in Code**:
+  ```python
+  from AutoGLM_GUI.logger import logger
+
+  logger.debug("Detailed information for debugging")
+  logger.info("Normal operation messages")
+  logger.warning("Warning messages")
+  logger.error("Error messages")
+  logger.exception("Exception with full stack trace")
+  ```
+- **Log Levels**:
+  - DEBUG: NAL unit caching, initialization data details, sent NAL counts
+  - INFO: Server startup, device connections, stream lifecycle events
+  - WARNING: Retries, failed operations with recovery, takeover requests
+  - ERROR: Failed starts, connection errors, unexpected exceptions
+
 ## Configuration
 
 ### Environment Variables
@@ -182,6 +227,9 @@ See `AutoGLM_GUI/__main__.py` for full list. Key args:
 - `--apikey`: API key
 - `--host`: Server host (default: 127.0.0.1)
 - `--port`: Server port (default: 8000, auto-finds if occupied)
+- `--log-level`: Console log level - DEBUG, INFO, WARNING, ERROR, CRITICAL (default: INFO)
+- `--log-file`: Log file path (default: logs/autoglm_{time:YYYY-MM-DD}.log)
+- `--no-log-file`: Disable file logging (console only)
 - `--no-browser`: Skip auto-opening browser
 - `--reload`: Enable uvicorn auto-reload (development only)
 
@@ -233,3 +281,4 @@ scripts/build.py       # Build automation
    - Build package: `uv run python scripts/build.py --pack`
    - Test wheel: `uvx --from dist/autoglm_gui-*.whl autoglm-gui`
    - Publish: `uv publish`
+- phone_agent 下面是第三方的代码，目前通过直接拷贝代码的情况下进行引用，为了保持兼容性，任何时候不能修改里面的代码
