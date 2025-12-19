@@ -81,8 +81,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--model",
-        default=DEFAULT_MODEL_NAME,
-        help=f"Model name to use (default: {DEFAULT_MODEL_NAME})",
+        default=None,
+        help=f"Model name to use (default: {DEFAULT_MODEL_NAME}, or from config file)",
     )
     parser.add_argument(
         "--apikey",
