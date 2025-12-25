@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Plug,
   Plus,
-  Info,
 } from 'lucide-react';
 import { DeviceCard } from './DeviceCard';
 import { Button } from '@/components/ui/button';
@@ -19,15 +18,11 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Device } from '../api';
-import { connectWifiManual } from '../api';
+import { connectWifiManual, pairWifi } from '../api';
 import { useTranslation } from '../lib/i18n-context';
 
 const getInitialCollapsedState = (): boolean => {
@@ -66,6 +61,13 @@ export function DeviceSidebar({
   const [manualConnectPort, setManualConnectPort] = useState('5555');
   const [ipError, setIpError] = useState('');
   const [portError, setPortError] = useState('');
+
+  // WiFi pairing (Android 11+)
+  const [activeTab, setActiveTab] = useState('direct');
+  const [pairingCode, setPairingCode] = useState('');
+  const [pairingPort, setPairingPort] = useState('');
+  const [connectionPort, setConnectionPort] = useState('5555');
+  const [pairingCodeError, setPairingCodeError] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
@@ -103,6 +105,10 @@ export function DeviceSidebar({
     return !isNaN(num) && num >= 1 && num <= 65535;
   };
 
+  const validatePairingCode = (code: string): boolean => {
+    return /^\d{6}$/.test(code);
+  };
+
   const handleManualConnect = async () => {
     setIpError('');
     setPortError('');
@@ -138,6 +144,71 @@ export function DeviceSidebar({
       }
     } catch {
       setIpError(t.toasts.wifiManualConnectError);
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
+  const handlePair = async () => {
+    setPairingCodeError('');
+    setIpError('');
+    setPortError('');
+
+    let hasError = false;
+
+    if (!validateIp(manualConnectIp)) {
+      setIpError(t.deviceSidebar.invalidIpError);
+      hasError = true;
+    }
+
+    if (!validatePort(pairingPort)) {
+      setPortError(t.deviceSidebar.invalidPortError);
+      hasError = true;
+    }
+
+    if (!validatePort(connectionPort)) {
+      setPortError(t.deviceSidebar.invalidPortError);
+      hasError = true;
+    }
+
+    if (!validatePairingCode(pairingCode)) {
+      setPairingCodeError(t.deviceSidebar.invalidPairingCodeError);
+      hasError = true;
+    }
+
+    if (hasError) return;
+
+    setIsConnecting(true);
+    try {
+      const result = await pairWifi({
+        ip: manualConnectIp,
+        pairing_port: parseInt(pairingPort, 10),
+        pairing_code: pairingCode,
+        connection_port: parseInt(connectionPort, 10),
+      });
+
+      if (result.success) {
+        setShowManualConnect(false);
+        // Reset form
+        setManualConnectIp('');
+        setManualConnectPort('5555');
+        setPairingCode('');
+        setPairingPort('');
+        setConnectionPort('5555');
+        setActiveTab('direct');
+        // Device list will auto-refresh via polling
+      } else {
+        // Show error based on error code
+        if (result.error === 'invalid_pairing_code') {
+          setPairingCodeError(result.message);
+        } else if (result.error === 'invalid_ip') {
+          setIpError(result.message);
+        } else {
+          setIpError(result.message || t.toasts.wifiPairError);
+        }
+      }
+    } catch {
+      setIpError(t.toasts.wifiPairError);
     } finally {
       setIsConnecting(false);
     }
@@ -249,24 +320,7 @@ export function DeviceSidebar({
             className="w-full justify-start gap-2 rounded-full border-slate-200 dark:border-slate-700"
           >
             <Plus className="h-4 w-4" />
-            <span className="flex-1 text-left">
-              {t.deviceSidebar.addDevice}
-            </span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <Info className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
-                </div>
-              </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                align="center"
-                sideOffset={5}
-                className="max-w-xs"
-              >
-                <p>{t.deviceSidebar.addDeviceTooltip}</p>
-              </TooltipContent>
-            </Tooltip>
+            {t.deviceSidebar.addDevice}
           </Button>
           <Button
             variant="outline"
@@ -287,34 +341,136 @@ export function DeviceSidebar({
                 {t.deviceSidebar.manualConnectDescription}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="ip">{t.deviceSidebar.ipAddress}</Label>
-                <Input
-                  id="ip"
-                  placeholder="192.168.1.100"
-                  value={manualConnectIp}
-                  onChange={e => setManualConnectIp(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleManualConnect()}
-                  className={ipError ? 'border-red-500' : ''}
-                />
-                {ipError && <p className="text-sm text-red-500">{ipError}</p>}
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="port">{t.deviceSidebar.port}</Label>
-                <Input
-                  id="port"
-                  type="number"
-                  value={manualConnectPort}
-                  onChange={e => setManualConnectPort(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleManualConnect()}
-                  className={portError ? 'border-red-500' : ''}
-                />
-                {portError && (
-                  <p className="text-sm text-red-500">{portError}</p>
-                )}
-              </div>
-            </div>
+
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="direct">
+                  {t.deviceSidebar.directConnectTab}
+                </TabsTrigger>
+                <TabsTrigger value="pair">
+                  {t.deviceSidebar.pairTab}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="direct" className="space-y-4">
+                <div className="rounded-lg bg-amber-50 dark:bg-amber-950/20 p-3 text-sm">
+                  <p className="text-amber-800 dark:text-amber-200">
+                    {t.deviceSidebar.directConnectNote}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="ip">{t.deviceSidebar.ipAddress}</Label>
+                  <Input
+                    id="ip"
+                    placeholder="192.168.1.100"
+                    value={manualConnectIp}
+                    onChange={e => setManualConnectIp(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleManualConnect()}
+                    className={ipError ? 'border-red-500' : ''}
+                  />
+                  {ipError && <p className="text-sm text-red-500">{ipError}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="port">{t.deviceSidebar.port}</Label>
+                  <Input
+                    id="port"
+                    type="number"
+                    value={manualConnectPort}
+                    onChange={e => setManualConnectPort(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleManualConnect()}
+                    className={portError ? 'border-red-500' : ''}
+                  />
+                  {portError && (
+                    <p className="text-sm text-red-500">{portError}</p>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="pair" className="space-y-4">
+                <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 p-3 text-sm">
+                  <p className="font-medium text-blue-900 dark:text-blue-100 mb-2">
+                    {t.deviceSidebar.pairingInstructions}
+                  </p>
+                  <ol className="space-y-1 text-blue-700 dark:text-blue-300 text-xs">
+                    <li>{t.deviceSidebar.pairingStep1}</li>
+                    <li>{t.deviceSidebar.pairingStep2}</li>
+                    <li>{t.deviceSidebar.pairingStep3}</li>
+                    <li>{t.deviceSidebar.pairingStep4}</li>
+                  </ol>
+                  <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                    {t.deviceSidebar.pairingNote}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pair-ip">{t.deviceSidebar.ipAddress}</Label>
+                  <Input
+                    id="pair-ip"
+                    placeholder="192.168.1.100"
+                    value={manualConnectIp}
+                    onChange={e => setManualConnectIp(e.target.value)}
+                    className={ipError ? 'border-red-500' : ''}
+                  />
+                  {ipError && <p className="text-sm text-red-500">{ipError}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pairing-port">
+                    {t.deviceSidebar.pairingPort}
+                  </Label>
+                  <Input
+                    id="pairing-port"
+                    type="number"
+                    placeholder="37831"
+                    value={pairingPort}
+                    onChange={e => setPairingPort(e.target.value)}
+                    className={portError ? 'border-red-500' : ''}
+                  />
+                  {portError && (
+                    <p className="text-sm text-red-500">{portError}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pairing-code">
+                    {t.deviceSidebar.pairingCode}
+                  </Label>
+                  <Input
+                    id="pairing-code"
+                    type="text"
+                    placeholder="123456"
+                    maxLength={6}
+                    value={pairingCode}
+                    onChange={e =>
+                      setPairingCode(e.target.value.replace(/\D/g, ''))
+                    }
+                    onKeyDown={e => e.key === 'Enter' && handlePair()}
+                    className={pairingCodeError ? 'border-red-500' : ''}
+                  />
+                  {pairingCodeError && (
+                    <p className="text-sm text-red-500">{pairingCodeError}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="connection-port">
+                    {t.deviceSidebar.connectionPort}
+                  </Label>
+                  <Input
+                    id="connection-port"
+                    type="number"
+                    value={connectionPort}
+                    onChange={e => setConnectionPort(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handlePair()}
+                  />
+                </div>
+              </TabsContent>
+            </Tabs>
+
             <DialogFooter>
               <Button
                 variant="outline"
@@ -322,11 +478,23 @@ export function DeviceSidebar({
                   setShowManualConnect(false);
                   setIpError('');
                   setPortError('');
+                  setPairingCodeError('');
+                  setManualConnectIp('');
+                  setManualConnectPort('5555');
+                  setPairingCode('');
+                  setPairingPort('');
+                  setConnectionPort('5555');
+                  setActiveTab('direct');
                 }}
               >
                 {t.common.cancel}
               </Button>
-              <Button onClick={handleManualConnect} disabled={isConnecting}>
+              <Button
+                onClick={
+                  activeTab === 'direct' ? handleManualConnect : handlePair
+                }
+                disabled={isConnecting}
+              >
                 {isConnecting ? t.common.loading : t.common.confirm}
               </Button>
             </DialogFooter>

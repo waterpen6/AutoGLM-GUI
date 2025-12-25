@@ -176,6 +176,20 @@ export interface WiFiManualConnectResponse {
   error?: string;
 }
 
+export interface WiFiPairRequest {
+  ip: string;
+  pairing_port: number;
+  pairing_code: string;
+  connection_port?: number;
+}
+
+export interface WiFiPairResponse {
+  success: boolean;
+  message: string;
+  device_id?: string;
+  error?: string;
+}
+
 export async function listDevices(): Promise<DeviceListResponse> {
   const res = await axios.get<DeviceListResponse>('/api/devices');
   return res.data;
@@ -213,6 +227,16 @@ export async function connectWifiManual(
 ): Promise<WiFiManualConnectResponse> {
   const res = await axios.post<WiFiManualConnectResponse>(
     '/api/devices/connect_wifi_manual',
+    payload
+  );
+  return res.data;
+}
+
+export async function pairWifi(
+  payload: WiFiPairRequest
+): Promise<WiFiPairResponse> {
+  const res = await axios.post<WiFiPairResponse>(
+    '/api/devices/pair_wifi',
     payload
   );
   return res.data;

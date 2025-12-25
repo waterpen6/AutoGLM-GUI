@@ -193,6 +193,24 @@ class WiFiManualConnectResponse(BaseModel):
     error: str | None = None
 
 
+class WiFiPairRequest(BaseModel):
+    """WiFi pairing request (Android 11+ wireless debugging)."""
+
+    ip: str  # Device IP address
+    pairing_port: int  # Pairing port (from "Pair device with code" dialog)
+    pairing_code: str  # 6-digit pairing code
+    connection_port: int = 5555  # Standard ADB connection port (default 5555)
+
+
+class WiFiPairResponse(BaseModel):
+    """WiFi pairing response."""
+
+    success: bool
+    message: str
+    device_id: str | None = None  # Device ID after connection (ip:connection_port)
+    error: str | None = None  # Error code for frontend handling
+
+
 class VersionCheckResponse(BaseModel):
     """Version update check response."""
 

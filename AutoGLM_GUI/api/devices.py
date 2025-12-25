@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from AutoGLM_GUI.adb_plus import get_wifi_ip, get_device_serial
+from AutoGLM_GUI.adb_plus import get_wifi_ip, get_device_serial, pair_device
 
 from AutoGLM_GUI.schemas import (
     DeviceListResponse,
@@ -12,6 +12,8 @@ from AutoGLM_GUI.schemas import (
     WiFiDisconnectResponse,
     WiFiManualConnectRequest,
     WiFiManualConnectResponse,
+    WiFiPairRequest,
+    WiFiPairResponse,
 )
 from AutoGLM_GUI.state import agents
 
@@ -165,4 +167,79 @@ def connect_wifi_manual(
         success=True,
         message=f"Successfully connected to {address}",
         device_id=address,
+    )
+
+
+@router.post("/api/devices/pair_wifi", response_model=WiFiPairResponse)
+def pair_wifi(request: WiFiPairRequest) -> WiFiPairResponse:
+    """使用无线调试配对并连接到 WiFi 设备 (Android 11+)."""
+    import re
+
+    from phone_agent.adb import ADBConnection
+
+    # IP 格式验证
+    ip_pattern = r"^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$"
+    if not re.match(ip_pattern, request.ip):
+        return WiFiPairResponse(
+            success=False,
+            message="Invalid IP address format",
+            error="invalid_ip",
+        )
+
+    # 配对端口验证
+    if not (1 <= request.pairing_port <= 65535):
+        return WiFiPairResponse(
+            success=False,
+            message="Pairing port must be between 1 and 65535",
+            error="invalid_port",
+        )
+
+    # 连接端口验证
+    if not (1 <= request.connection_port <= 65535):
+        return WiFiPairResponse(
+            success=False,
+            message="Connection port must be between 1 and 65535",
+            error="invalid_port",
+        )
+
+    # 配对码验证 (6 位数字)
+    if not request.pairing_code.isdigit() or len(request.pairing_code) != 6:
+        return WiFiPairResponse(
+            success=False,
+            message="Pairing code must be 6 digits",
+            error="invalid_pairing_code",
+        )
+
+    conn = ADBConnection()
+
+    # 步骤 1: 配对设备
+    ok, msg = pair_device(
+        ip=request.ip,
+        port=request.pairing_port,
+        pairing_code=request.pairing_code,
+        adb_path=conn.adb_path,
+    )
+
+    if not ok:
+        return WiFiPairResponse(
+            success=False,
+            message=msg,
+            error="pair_failed",
+        )
+
+    # 步骤 2: 使用标准 ADB 端口连接到设备
+    connection_address = f"{request.ip}:{request.connection_port}"
+    ok, connect_msg = conn.connect(connection_address)
+
+    if not ok:
+        return WiFiPairResponse(
+            success=False,
+            message=f"Paired successfully but connection failed: {connect_msg}",
+            error="connect_failed",
+        )
+
+    return WiFiPairResponse(
+        success=True,
+        message=f"Successfully paired and connected to {connection_address}",
+        device_id=connection_address,
     )

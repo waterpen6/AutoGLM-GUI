@@ -39,11 +39,27 @@ export const en = {
     noDevicesConnected: 'No devices connected',
     clickToRefresh: 'Click refresh to scan devices',
     manualConnectTitle: 'Connect to WiFi Device',
-    manualConnectDescription: 'Enter the IP address and port of the device',
+    manualConnectDescription: 'Choose connection method',
     ipAddress: 'IP Address',
     port: 'Port',
     invalidIpError: 'Invalid IP address format',
     invalidPortError: 'Port must be between 1 and 65535',
+    directConnectTab: 'Direct Connect',
+    directConnectNote:
+      'Note: First-time connection requires wireless pairing in the "Pair Device" tab',
+    pairTab: 'Pair Device',
+    pairingCode: 'Pairing Code',
+    pairingPort: 'Pairing Port',
+    connectionPort: 'Connection Port',
+    invalidPairingCodeError: 'Pairing code must be 6 digits',
+    pairingInstructions: 'How to get pairing code:',
+    pairingStep1: '1. Open Settings → Developer Options on your device',
+    pairingStep2: '2. Enable "Wireless Debugging"',
+    pairingStep3: '3. Tap "Pair device with pairing code"',
+    pairingStep4:
+      '4. Enter the IP address, pairing port, and 6-digit code shown',
+    pairingNote:
+      'Note: Pairing port and connection port are different. After pairing, the system will automatically connect using the connection port (default 5555).',
   },
   devicePanel: {
     noConfig: 'Please configure your API settings first',
@@ -118,6 +134,8 @@ export const en = {
     wifiDisconnectError: 'WiFi disconnect error',
     wifiManualConnected: 'WiFi device connected',
     wifiManualConnectError: 'Failed to connect to WiFi device',
+    wifiPaired: 'WiFi device paired and connected',
+    wifiPairError: 'WiFi pairing failed',
   },
   history: {
     title: 'Task History',

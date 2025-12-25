@@ -6,6 +6,7 @@ from .touch import touch_down, touch_move, touch_up
 from .ip import get_wifi_ip
 from .serial import get_device_serial
 from .device import check_device_available
+from .pair import pair_device
 
 __all__ = [
     "ADBKeyboardInstaller",
@@ -17,4 +18,5 @@ __all__ = [
     "get_wifi_ip",
     "get_device_serial",
     "check_device_available",
+    "pair_device",
 ]
