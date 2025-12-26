@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { QRCodeSVG } from 'qrcode.react';
 import type { Device, MdnsDevice } from '../api';
+import logoImage from '@/assets/logo.png';
 import {
   connectWifiManual,
   pairWifi,
@@ -486,8 +487,12 @@ export function DeviceSidebar({
         {/* Header */}
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1d9bf0]/10">
-              <Smartphone className="h-5 w-5 text-[#1d9bf0]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#f5f1e8] dark:bg-[#f5f1e8]/10">
+              <img
+                src={logoImage}
+                alt="AutoGLM Logo"
+                className="h-6 w-6 object-contain"
+              />
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">

@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link, useMatchRoute } from '@tanstack/react-router';
-import { MessageSquare, type LucideIcon } from 'lucide-react';
+import { MessageSquare, ListChecks, type LucideIcon } from 'lucide-react';
 import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
 } from '@/components/ui/tooltip';
 import { useTranslation } from '../lib/i18n-context';
+import logoImage from '@/assets/logo.png';
 
 interface NavigationItem {
   id: string;
@@ -30,6 +31,12 @@ export function NavigationSidebar({ className }: NavigationSidebarProps) {
       label: t.navigation.chat,
       path: '/chat',
     },
+    {
+      id: 'workflows',
+      icon: ListChecks,
+      label: t.navigation.workflows,
+      path: '/workflows',
+    },
   ];
 
   return (
@@ -37,6 +44,25 @@ export function NavigationSidebar({ className }: NavigationSidebarProps) {
       className={`w-16 h-full flex flex-col bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 ${className || ''}`}
     >
       <div className="flex flex-col items-center py-4 gap-2">
+        {/* Logo at top - clickable to navigate to /chat */}
+        <div className="mb-4 pb-4 border-b border-slate-200 dark:border-slate-800 w-full flex justify-center">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Link to="/chat" className="block">
+                <img
+                  src={logoImage}
+                  alt="AutoGLM Logo"
+                  className="w-10 h-10 object-contain cursor-pointer hover:opacity-80 transition-opacity"
+                />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent side="right" sideOffset={8}>
+              返回首页
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        {/* Navigation items */}
         {navigationItems.map(item => {
           const Icon = item.icon;
           const isActive = matchRoute({ to: item.path });
