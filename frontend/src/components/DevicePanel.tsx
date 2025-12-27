@@ -71,7 +71,8 @@ interface GlobalConfig {
 }
 
 interface DevicePanelProps {
-  deviceId: string;
+  deviceId: string; // Used for API calls
+  deviceSerial: string; // Used for history storage
   deviceName: string;
   config: GlobalConfig | null;
   isVisible: boolean;
@@ -80,6 +81,7 @@ interface DevicePanelProps {
 
 export function DevicePanel({
   deviceId,
+  deviceSerial,
   deviceName,
   config,
   isConfigured,
@@ -199,10 +201,10 @@ export function DevicePanel({
   // Load history items when popover opens
   useEffect(() => {
     if (showHistoryPopover) {
-      const items = loadHistoryItems(deviceId);
+      const items = loadHistoryItems(deviceSerial);
       setHistoryItems(items);
     }
-  }, [showHistoryPopover, deviceId]);
+  }, [showHistoryPopover, deviceSerial]);
 
   const handleSelectHistory = (item: HistoryItem) => {
     const userMessage: Message = {
@@ -228,13 +230,13 @@ export function DevicePanel({
 
   const handleClearHistory = () => {
     if (confirm(t.history.clearAllConfirm)) {
-      clearHistory(deviceId);
+      clearHistory(deviceSerial);
       setHistoryItems([]);
     }
   };
 
   const handleDeleteItem = (itemId: string) => {
-    deleteHistoryItem(deviceId, itemId);
+    deleteHistoryItem(deviceSerial, itemId);
     // 从列表中移除已删除的项
     setHistoryItems(prev => prev.filter(item => item.id !== itemId));
   };
@@ -340,12 +342,12 @@ export function DevicePanel({
 
         // 保存到历史记录
         const historyItem = createHistoryItem(
-          deviceId,
+          deviceSerial,
           deviceName,
           userMessage,
           updatedAgentMessage
         );
-        saveHistoryItem(deviceId, historyItem);
+        saveHistoryItem(deviceSerial, historyItem);
       },
       (event: ErrorEvent) => {
         const updatedAgentMessage = {
@@ -369,17 +371,25 @@ export function DevicePanel({
 
         // 保存失败的任务到历史记录
         const historyItem = createHistoryItem(
-          deviceId,
+          deviceSerial,
           deviceName,
           userMessage,
           updatedAgentMessage
         );
-        saveHistoryItem(deviceId, historyItem);
+        saveHistoryItem(deviceSerial, historyItem);
       }
     );
 
     chatStreamRef.current = stream;
-  }, [input, loading, initialized, deviceId, deviceName, handleInit]);
+  }, [
+    input,
+    loading,
+    initialized,
+    deviceId,
+    deviceSerial,
+    deviceName,
+    handleInit,
+  ]);
 
   const handleReset = useCallback(async () => {
     if (chatStreamRef.current) {

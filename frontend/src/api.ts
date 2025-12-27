@@ -2,11 +2,11 @@ import axios from 'redaxios';
 
 export interface Device {
   id: string;
+  serial: string; // Hardware serial number (always present)
   model: string;
   status: string;
   connection_type: string;
   is_initialized: boolean;
-  serial?: string; // 设备真实序列号
 }
 
 export interface DeviceListResponse {

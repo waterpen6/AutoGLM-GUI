@@ -449,13 +449,14 @@ function ChatComponent() {
         ) : (
           devices.map(device => (
             <div
-              key={device.id}
+              key={device.serial}
               className={`w-full max-w-7xl flex items-stretch justify-center min-h-0 ${
                 device.id === currentDeviceId ? '' : 'hidden'
               }`}
             >
               <DevicePanel
                 deviceId={device.id}
+                deviceSerial={device.serial}
                 deviceName={device.model}
                 config={config}
                 isVisible={device.id === currentDeviceId}
